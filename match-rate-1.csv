@@ -1,0 +1,4 @@
+operator,n,m,match_rate,join_comparisons,select_evaluations,wall_seconds,output_tuples
+join,4000,4000,1.0,16000000,0,3.6728423999156803,4000
+select,4000,4000,1.0,0,4000,0.0013067000545561314,4000
+project,4000,4000,1.0,0,0,0.0019647000590339303,4000
