@@ -2,6 +2,8 @@
 
 **Measurement machine:** Windows PC, 13th Gen Intel Core i7-1355U. **Language/runtime:** Python 3.12.10. The user ran `python benchmark.py --match-rate 0 --csv measurements.csv` on this machine. The data generator created `R(a,b)` and `S(b,c)` with unique `b` keys that do not match when the match rate is zero. The join is a nested-loop theta join, with an actual counter increment inside the pair-evaluation loop. Timings use `time.perf_counter()` around parsing and evaluation of each query; data generation and file loading occur before the timer. Rows below are actual measurements from the Windows machine, transcribed from the CSV.
 
+I collected these measurements before adding separate per-operator counters. The measured version used aggregate counters inside the same nested-loop join and selection algorithms. The submitted version additionally records each operator’s count, which may add timing overhead. The CSV files preserve the original measurements.
+
 | n | m | Join comparisons | Join wall time (s) | Join output tuples |
 | ---: | ---: | ---: | ---: | ---: |
 | 1,000 | 1,000 | 1,000,000 | 0.247224 | 0 |
