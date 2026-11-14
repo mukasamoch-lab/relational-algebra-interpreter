@@ -7,27 +7,10 @@ import unittest
 
 from catalog import Catalog
 from executor import build_plan, execute
+from physical_plan import lower_plan
 from sql_compiler import compile_sql
 from sql_frontend import main
 from sql_parser import SQLError
-
-
-def physical(node):
-    """Translate the operators exercised by this integration fixture."""
-    translated = dict(node)
-    op = node["op"]
-    translated["op"] = {
-        "scan": "seqscan", "select": "filter", "join": "nested_loop_join",
-        "cross": "nested_loop_join",
-    }.get(op, op)
-    if op in ("group_by", "distinct"):
-        translated["mode"] = "sort"
-    if op == "cross":
-        translated["condition"] = "1 = 1"
-    for key in ("child", "left", "right"):
-        if key in translated:
-            translated[key] = physical(translated[key])
-    return translated
 
 
 class SQLTests(unittest.TestCase):
@@ -50,7 +33,7 @@ class SQLTests(unittest.TestCase):
         return compile_sql(query, self.catalog)
 
     def rows(self, sql):
-        root = build_plan(physical(self.compile(sql)), self.catalog)
+        root = build_plan(lower_plan(self.compile(sql)), self.catalog)
         output = StringIO()
         execute(root, output, True)
         return json.loads(output.getvalue())["rows"]
@@ -164,6 +147,23 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(plan["keys"], [["employee", "asc"]])
         self.assertEqual(plan["child"]["aliases"], ["employee"])
         self.assertEqual(self.compile("SELECT DISTINCT did FROM Emp GROUP BY did")["op"], "project")
+
+    def test_cli_runs_join_filter_and_sort(self):
+        demo = Path(__file__).resolve().parents[1] / "sql_pipeline_demo.sql"
+        output = StringIO()
+        with redirect_stdout(output):
+            status = main(["run", "--db", str(self.path / "demo"),
+                           "--file", str(demo), "--frames", "4"])
+        self.assertEqual(status, 0)
+        result = json.loads(output.getvalue())[-1]
+        self.assertEqual(result["rows"], [["Bob", "South", 24], ["Amy", "North", 17]])
+        self.assertEqual(result["totals"]["tuples_out"], 2)
+        self.assertGreater(result["totals"]["page_reads"], 0)
+        self.assertGreaterEqual(result["wall_ms"], 0)
+        counts = {node["op"]: node["tuples_out"] for node in result["operators"]}
+        self.assertEqual(counts["nested_loop_join"], 3)
+        self.assertEqual(counts["filter"], 2)
+        self.assertEqual(counts["sort"], 2)
 
     def test_cli_check_error_position_and_parse(self):
         source = self.path / "input.sql"

@@ -133,3 +133,40 @@ until after sorting, and the test executes the resulting plan.
 
 The grammar and compiler are handwritten. Tests cover the fifteen
 required cases and report compiler errors with source locations.
+
+## Module 4 execution baseline
+
+The Module 3 tests translated plans locally. Moving the translation into
+the SQL runner makes the same path available from the CLI and gives Module 4
+a fixed baseline for I/O comparisons. The demo includes a player with a
+missing team and a matched player below the score threshold. With four
+frames, the join returns three matches and the filter and sort return two
+rows in descending score order. Timings include physical operator
+construction and executor result formatting.
+
+## Module 4 optimizer and integration
+
+The first optimizer draft assumed that every ON conjunct would cross a
+join boundary after flattening. A single-sided predicate can instead stay
+on the ON clause when pushdown is disabled. That draft could omit the
+condition. The regression disables the rules one by one for the combined
+key and points condition and checks the returned rows. The optimizer now
+keeps written order for such inputs if the predicate has not moved.
+
+Another integration mismatch was multiline SQL strings. The SQL scanner
+accepted them while the shared predicate lexer rejected a newline before
+the closing quote. A filter against a stored multiline value exposed the
+mismatch. The standalone predicate parser now opts into multiline values.
+The relational algebra query lexer retains its original behavior.
+
+The first workload fixture used VARCHAR(1200) to make wide rows, which
+the existing schema validator immediately rejected. Five VARCHAR(240)
+columns make the workload wide within the supported schema instead.
+The first workload also omitted AS on subqueries. The compiler stopped
+at Q21, which prompted correcting the generated SQL and rerunning the
+full workload before recording measurements.
+
+The OpenStack CSV reader initially used the default CSV field limit.
+The wide correlated query can put more than 128 KiB of JSON in one
+cell. A verifier round trip with a realistically sized CSV exposed
+the limit, so the reader now accepts the full exported cell.

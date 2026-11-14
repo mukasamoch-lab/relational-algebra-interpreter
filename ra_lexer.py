@@ -20,7 +20,7 @@ class Token:
     position: int
 
 
-def tokenize(source: str) -> list[Token]:
+def tokenize(source: str, *, multiline_strings: bool = False) -> list[Token]:
     """Scan query text one character at a time; no regex or split-based parsing."""
     tokens: list[Token] = []
     i = 0
@@ -38,7 +38,7 @@ def tokenize(source: str) -> list[Token]:
             i += 1
             parts: list[str] = []
             while True:
-                if i >= len(source) or source[i] in "\r\n":
+                if i >= len(source) or (not multiline_strings and source[i] in "\r\n"):
                     raise QueryError("Lexical", "unterminated quoted string", start)
                 if source[i] == "'":
                     if i + 1 < len(source) and source[i + 1] == "'":

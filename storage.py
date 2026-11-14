@@ -61,6 +61,7 @@ def load_csv(catalog, name, filename):
     finally:
         # A later invalid row leaves earlier valid rows and their counts intact.
         if inserted:
+            info["statistics"] = {}
             info["num_tuples"] += inserted
             info["num_pages"] = data_page_count(heap)
             catalog.pool.flush_all()

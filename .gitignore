@@ -3,3 +3,7 @@ __pycache__/
 .pytest_cache/
 sample.ra
 generated.ra
+
+postgres_results.csv
+bonus2_video_demo*/
+sql_pipeline_demo_db*/

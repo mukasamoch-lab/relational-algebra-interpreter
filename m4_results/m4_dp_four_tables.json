@@ -1,0 +1,709 @@
+[
+  {
+    "subset": [
+      0
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ]
+    ],
+    "rows": 31,
+    "pages": 1,
+    "cost": 160,
+    "plan": {
+      "op": "rename",
+      "to": "f",
+      "child": {
+        "op": "filter",
+        "condition": "Fact.id < 30",
+        "child": {
+          "op": "project",
+          "columns": [
+            "Fact.id",
+            "Fact.x"
+          ],
+          "child": {
+            "op": "seqscan",
+            "table": "Fact"
+          }
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      1
+    ],
+    "sources": [
+      [
+        "t.id",
+        "t.region"
+      ]
+    ],
+    "rows": 8,
+    "pages": 1,
+    "cost": 1,
+    "plan": {
+      "op": "rename",
+      "to": "t",
+      "child": {
+        "op": "seqscan",
+        "table": "Team"
+      }
+    }
+  },
+  {
+    "subset": [
+      2
+    ],
+    "sources": [
+      [
+        "r.id",
+        "r.country"
+      ]
+    ],
+    "rows": 4,
+    "pages": 1,
+    "cost": 1,
+    "plan": {
+      "op": "rename",
+      "to": "r",
+      "child": {
+        "op": "seqscan",
+        "table": "Region"
+      }
+    }
+  },
+  {
+    "subset": [
+      3
+    ],
+    "sources": [
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 2,
+    "pages": 1,
+    "cost": 1,
+    "plan": {
+      "op": "rename",
+      "to": "c",
+      "child": {
+        "op": "seqscan",
+        "table": "Country"
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      1
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "t.id",
+        "t.region"
+      ]
+    ],
+    "rows": 31,
+    "pages": 1,
+    "cost": 163,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(f.x = t.id)",
+      "left": {
+        "op": "rename",
+        "to": "t",
+        "child": {
+          "op": "seqscan",
+          "table": "Team"
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "f",
+        "child": {
+          "op": "filter",
+          "condition": "Fact.id < 30",
+          "child": {
+            "op": "project",
+            "columns": [
+              "Fact.id",
+              "Fact.x"
+            ],
+            "child": {
+              "op": "seqscan",
+              "table": "Fact"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      2
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "r.id",
+        "r.country"
+      ]
+    ],
+    "rows": 124,
+    "pages": 1,
+    "cost": 163,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "1 = 1",
+      "left": {
+        "op": "rename",
+        "to": "r",
+        "child": {
+          "op": "seqscan",
+          "table": "Region"
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "f",
+        "child": {
+          "op": "filter",
+          "condition": "Fact.id < 30",
+          "child": {
+            "op": "project",
+            "columns": [
+              "Fact.id",
+              "Fact.x"
+            ],
+            "child": {
+              "op": "seqscan",
+              "table": "Fact"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      3
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 62,
+    "pages": 1,
+    "cost": 163,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "1 = 1",
+      "left": {
+        "op": "rename",
+        "to": "c",
+        "child": {
+          "op": "seqscan",
+          "table": "Country"
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "f",
+        "child": {
+          "op": "filter",
+          "condition": "Fact.id < 30",
+          "child": {
+            "op": "project",
+            "columns": [
+              "Fact.id",
+              "Fact.x"
+            ],
+            "child": {
+              "op": "seqscan",
+              "table": "Fact"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      1,
+      2
+    ],
+    "sources": [
+      [
+        "t.id",
+        "t.region"
+      ],
+      [
+        "r.id",
+        "r.country"
+      ]
+    ],
+    "rows": 8,
+    "pages": 1,
+    "cost": 4,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(t.region = r.id)",
+      "left": {
+        "op": "rename",
+        "to": "r",
+        "child": {
+          "op": "seqscan",
+          "table": "Region"
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "t",
+        "child": {
+          "op": "seqscan",
+          "table": "Team"
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      1,
+      3
+    ],
+    "sources": [
+      [
+        "t.id",
+        "t.region"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 16,
+    "pages": 1,
+    "cost": 4,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "1 = 1",
+      "left": {
+        "op": "rename",
+        "to": "c",
+        "child": {
+          "op": "seqscan",
+          "table": "Country"
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "t",
+        "child": {
+          "op": "seqscan",
+          "table": "Team"
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      2,
+      3
+    ],
+    "sources": [
+      [
+        "r.id",
+        "r.country"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 4,
+    "pages": 1,
+    "cost": 4,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(r.country = c.id)",
+      "left": {
+        "op": "rename",
+        "to": "c",
+        "child": {
+          "op": "seqscan",
+          "table": "Country"
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "r",
+        "child": {
+          "op": "seqscan",
+          "table": "Region"
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      1,
+      2
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "t.id",
+        "t.region"
+      ],
+      [
+        "r.id",
+        "r.country"
+      ]
+    ],
+    "rows": 31,
+    "pages": 1,
+    "cost": 166,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(f.x = t.id)",
+      "left": {
+        "op": "nested_loop_join",
+        "condition": "(t.region = r.id)",
+        "left": {
+          "op": "rename",
+          "to": "r",
+          "child": {
+            "op": "seqscan",
+            "table": "Region"
+          }
+        },
+        "right": {
+          "op": "rename",
+          "to": "t",
+          "child": {
+            "op": "seqscan",
+            "table": "Team"
+          }
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "f",
+        "child": {
+          "op": "filter",
+          "condition": "Fact.id < 30",
+          "child": {
+            "op": "project",
+            "columns": [
+              "Fact.id",
+              "Fact.x"
+            ],
+            "child": {
+              "op": "seqscan",
+              "table": "Fact"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      1,
+      3
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "t.id",
+        "t.region"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 62,
+    "pages": 1,
+    "cost": 166,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(f.x = t.id)",
+      "left": {
+        "op": "nested_loop_join",
+        "condition": "1 = 1",
+        "left": {
+          "op": "rename",
+          "to": "c",
+          "child": {
+            "op": "seqscan",
+            "table": "Country"
+          }
+        },
+        "right": {
+          "op": "rename",
+          "to": "t",
+          "child": {
+            "op": "seqscan",
+            "table": "Team"
+          }
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "f",
+        "child": {
+          "op": "filter",
+          "condition": "Fact.id < 30",
+          "child": {
+            "op": "project",
+            "columns": [
+              "Fact.id",
+              "Fact.x"
+            ],
+            "child": {
+              "op": "seqscan",
+              "table": "Fact"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      2,
+      3
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "r.id",
+        "r.country"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 124,
+    "pages": 1,
+    "cost": 166,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(r.country = c.id)",
+      "left": {
+        "op": "nested_loop_join",
+        "condition": "1 = 1",
+        "left": {
+          "op": "rename",
+          "to": "c",
+          "child": {
+            "op": "seqscan",
+            "table": "Country"
+          }
+        },
+        "right": {
+          "op": "rename",
+          "to": "f",
+          "child": {
+            "op": "filter",
+            "condition": "Fact.id < 30",
+            "child": {
+              "op": "project",
+              "columns": [
+                "Fact.id",
+                "Fact.x"
+              ],
+              "child": {
+                "op": "seqscan",
+                "table": "Fact"
+              }
+            }
+          }
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "r",
+        "child": {
+          "op": "seqscan",
+          "table": "Region"
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      1,
+      2,
+      3
+    ],
+    "sources": [
+      [
+        "t.id",
+        "t.region"
+      ],
+      [
+        "r.id",
+        "r.country"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 8,
+    "pages": 1,
+    "cost": 7,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(t.region = r.id)",
+      "left": {
+        "op": "nested_loop_join",
+        "condition": "(r.country = c.id)",
+        "left": {
+          "op": "rename",
+          "to": "c",
+          "child": {
+            "op": "seqscan",
+            "table": "Country"
+          }
+        },
+        "right": {
+          "op": "rename",
+          "to": "r",
+          "child": {
+            "op": "seqscan",
+            "table": "Region"
+          }
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "t",
+        "child": {
+          "op": "seqscan",
+          "table": "Team"
+        }
+      }
+    }
+  },
+  {
+    "subset": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "sources": [
+      [
+        "f.id",
+        "f.x"
+      ],
+      [
+        "t.id",
+        "t.region"
+      ],
+      [
+        "r.id",
+        "r.country"
+      ],
+      [
+        "c.id",
+        "c.label"
+      ]
+    ],
+    "rows": 31,
+    "pages": 1,
+    "cost": 169,
+    "plan": {
+      "op": "nested_loop_join",
+      "condition": "(f.x = t.id)",
+      "left": {
+        "op": "nested_loop_join",
+        "condition": "(t.region = r.id)",
+        "left": {
+          "op": "nested_loop_join",
+          "condition": "(r.country = c.id)",
+          "left": {
+            "op": "rename",
+            "to": "c",
+            "child": {
+              "op": "seqscan",
+              "table": "Country"
+            }
+          },
+          "right": {
+            "op": "rename",
+            "to": "r",
+            "child": {
+              "op": "seqscan",
+              "table": "Region"
+            }
+          }
+        },
+        "right": {
+          "op": "rename",
+          "to": "t",
+          "child": {
+            "op": "seqscan",
+            "table": "Team"
+          }
+        }
+      },
+      "right": {
+        "op": "rename",
+        "to": "f",
+        "child": {
+          "op": "filter",
+          "condition": "Fact.id < 30",
+          "child": {
+            "op": "project",
+            "columns": [
+              "Fact.id",
+              "Fact.x"
+            ],
+            "child": {
+              "op": "seqscan",
+              "table": "Fact"
+            }
+          }
+        }
+      }
+    }
+  }
+]

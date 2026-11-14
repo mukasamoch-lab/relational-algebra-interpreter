@@ -170,7 +170,7 @@ def parse(source: str) -> Node:
 
 
 def parse_condition(source: str) -> Node:
-    parser = Parser(tokenize(source))
+    parser = Parser(tokenize(source, multiline_strings=True))
     condition = parser.condition()
     parser.expect("EOF")
     return condition

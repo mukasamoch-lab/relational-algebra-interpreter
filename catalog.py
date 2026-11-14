@@ -190,6 +190,7 @@ class Table:
             raise ValueError(f"table {self.name}: record does not fit with its slot")
         info = self.catalog.get_table(self.name)
         rid = self.heap.insert(record)
+        info["statistics"] = {}
         info["num_tuples"] += 1
         info["num_pages"] = self.heap.num_data_pages()
         self.catalog.pool.flush_all()
@@ -202,6 +203,7 @@ class Table:
     def delete(self, rid):
         info = self.catalog.get_table(self.name)
         self.heap.delete(rid)
+        info["statistics"] = {}
         info["num_tuples"] -= 1
         self.catalog.pool.flush_all()
         self.catalog.save_table(info)

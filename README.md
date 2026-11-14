@@ -14,6 +14,24 @@ For the compile example, put `SELECT b FROM R ORDER BY a DESC;`
 in sample.sql. Compile emits a logical plan. See GRAMMAR_SQL.md and
 DESIGN_M3.md for the supported SQL and plan fields.
 
+## Project 2 SQL execution baseline
+
+Run the demo against a fresh directory. The script creates and loads its own tables.
+
+```powershell
+python sql_frontend.py run --db sql_pipeline_demo_db --file sql_pipeline_demo.sql --frames 4
+```
+
+The final result has two rows, Bob then Amy, followed by total and per-operator
+counters and elapsed milliseconds. For a repeat run, choose a fresh directory
+name. SQL scripts compile before execution, then statements apply in order.
+The script is not transactional. The runner buffers each query result before
+printing JSON, so use it with workloads whose results fit in memory.
+
+The baseline uses block nested-loop joins in written order and sort-based
+grouping and DISTINCT. A cross product uses a constant true join predicate.
+This baseline is intended for comparison with the Module 4 optimizer.
+
 ## Project 2 execution pipeline
 
 Current Module 2 operators are seqscan, filter, project, limit, and external sort.
