@@ -60,10 +60,11 @@ class SlottedPage:
 
         struct.pack_into("<HH", self.data, slot_offset, 0, 0)
 
-    def live_records(self):
+    def live_records(self, copy_records=True):
         _, slot_count, _ = struct.unpack_from("<IHH", self.data, 0)
         for slot_no in range(slot_count):
             slot_offset = HEADER_SIZE + SLOT_SIZE * slot_no
             record_offset, length = struct.unpack_from("<HH", self.data, slot_offset)
             if record_offset != 0:
-                yield slot_no, bytes(self.data[record_offset:record_offset + length])
+                view = memoryview(self.data)[record_offset:record_offset + length]
+                yield slot_no, bytes(view) if copy_records else view

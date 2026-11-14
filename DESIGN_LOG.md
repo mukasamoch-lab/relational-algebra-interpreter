@@ -55,3 +55,60 @@ catalog snapshots spanning multiple pages, early scan closure, dirty
 eviction, repeated flushes, and directory overflow past 681 data pages.
 The storage examples and capacity/scan measurements are reproducible.
 Published trace measurements remain pending receipt of the five files.
+
+## Module 2 first pipeline
+
+AI assistance added the iterator interface and seqscan/filter/project/limit
+operators. Conditions reuse the extracted Bonus 1 parser and compiler.
+Plan shape and semantic checks happen before opening the iterator chain.
+The new tests verify duplicate preservation, one filter comparison per
+examined tuple, and pin cleanup when LIMIT stops early.
+
+The design draft explicitly records directory-page scan overhead and the
+choice to exclude catalog preparation reads from per-operator execution
+I/O. The separate full physical-plan JSON schema was not supplied, so
+the limit field n is an interface choice pending comparison with it.
+The complete Module 2 report and its required AI-error investigations
+remain open while the other operators are built.
+
+## Module 2 external sort
+
+AI assistance added temporary page files, bounded run generation, and
+B-1-way merging. The first implementation failed three VARCHAR tests
+because decode_record called .decode on a memoryview slice. The regression
+traceback identified that the decoder had assumed bytes. It now converts
+only the individual string field slice to bytes before decoding.
+
+A second memory issue appeared during design review. Keeping B run pages
+pinned while also creating decoded rows or an encoded output-page list
+would exceed the budget. The sorter now sorts references into page buffers.
+The storage layer streams temporary page fragments directly, and ordinary
+iterator pulls reserve a tuple workspace against the shared frame budget.
+The N=B boundary test records the resulting extra streaming pass explicitly.
+
+The tests include 80 data pages at B=4, duplicate keys across runs, mixed
+directions, UTF-8 ordering, empty input, early LIMIT, nested sorts, and an
+injected comparison failure that must clean up all pins and temporary files.
+The codec fix, page-view scan option, and pool changes were also checked
+against the existing M1 and Bonus 1 tests.
+
+## Module 1 trace completion and Module 2 joins
+
+The instructor authorized self-generated report inputs. The M1 report
+now includes the deterministic trace generator and its 40 policy results.
+All three joins use the physical plan fields in the module examples.
+The four-frame tests compare their output bags and check actual shared
+disk counters, early close, and overflow behavior. Serial child
+materialization simplifies the frame accounting but adds I/O and makes
+block nested-loop blocking during preparation. The design records this
+difference for later comparison with the textbook I/O formulas.
+
+## Module 2 grouping and set operators
+
+Both group modes now share aggregate validation and result formatting.
+The external sorter is reused for adjacent-group aggregation, oversized
+hash partitions, and set merges. An integration check required adding
+temporary encodings for derived numeric results, so a sort above AVG
+can spool its input and preserve the result type. Four-frame regression
+tests exercise both grouping modes, empty inputs, duplicate elimination,
+set operations over disk-sized inputs, and early UNION ALL termination.

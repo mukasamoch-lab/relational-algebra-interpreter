@@ -1,0 +1,8 @@
+{
+  "op": "sort",
+  "keys": [["R.a", "desc"]],
+  "child": {
+    "op": "seqscan",
+    "table": "R"
+  }
+}

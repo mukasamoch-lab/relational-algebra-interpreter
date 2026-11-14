@@ -96,7 +96,7 @@ class HeapFile:
         finally:
             self.pool.unpin_page(page_id, is_dirty=dirty)
 
-    def scan(self):
+    def scan(self, copy_records=True):
         directory_id = 0
         while directory_id != NO_NEXT_PAGE:
             frame = self.pool.fetch_page(directory_id)
@@ -107,7 +107,7 @@ class HeapFile:
                     data_frame = self.pool.fetch_page(page_id)
                     try:
                         page = SlottedPage(page_id, data_frame.data)
-                        for slot_no, record in page.live_records():
+                        for slot_no, record in page.live_records(copy_records=copy_records):
                             yield (page_id, slot_no), record
                     finally:
                         self.pool.unpin_page(page_id)

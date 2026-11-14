@@ -1,6 +1,9 @@
 import struct
 
 
+FIXED_TYPES = {"INT": "<i", "BIGINT": "<q", "REAL": "<d"}
+
+
 def encode_record(schema, values):
     if len(schema) != len(values):
         raise ValueError("record has the wrong number of values")
@@ -14,6 +17,8 @@ def encode_record(schema, values):
                 raise ValueError(f"{name} must be a signed 32-bit integer")
             record.extend(struct.pack("<i", value))
 
+        elif kind in ("BIGINT", "REAL"):
+            record.extend(struct.pack(FIXED_TYPES[kind], value))
         elif kind == "VARCHAR":
             (max_length,) = options
             if not isinstance(value, str):
@@ -36,11 +41,13 @@ def decode_record(schema, record):
     for column in schema:
         name, kind, *options = column
 
-        if kind == "INT":
-            if offset + 4 > len(record):
-                raise ValueError(f"truncated INT field {name}")
-            (value,) = struct.unpack_from("<i", record, offset)
-            offset += 4
+        if kind in FIXED_TYPES:
+            fmt = FIXED_TYPES[kind]
+            size = struct.calcsize(fmt)
+            if offset + size > len(record):
+                raise ValueError(f"truncated {kind} field {name}")
+            (value,) = struct.unpack_from(fmt, record, offset)
+            offset += size
 
         elif kind == "VARCHAR":
             (max_length,) = options
@@ -55,7 +62,7 @@ def decode_record(schema, record):
             end = offset + length
             if end > len(record):
                 raise ValueError(f"truncated VARCHAR field {name}")
-            value = record[offset:end].decode("utf-8")
+            value = bytes(record[offset:end]).decode("utf-8")
             offset = end
 
         else:

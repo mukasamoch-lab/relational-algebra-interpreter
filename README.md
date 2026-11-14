@@ -2,6 +2,15 @@
 
 Python 3, standard library only. The scanner and recursive descent parser are handwritten; no regular expressions, parser generators, `eval`, or SQL engine are used.
 
+## Project 2 execution pipeline
+
+Current Module 2 operators are seqscan, filter, project, limit, and external sort.
+See [START_HERE_M2.md](START_HERE_M2.md) for the sample plan and commands.
+See [START_HERE_SORT.md](START_HERE_SORT.md) for sort tests and measurements.
+Block nested-loop, sort-merge, and Grace hash joins are available.
+Grouping and DISTINCT support sort and hash modes. Set operators support
+UNION ALL, UNION, INTERSECT, and EXCEPT.
+
 ## Project 2 storage
 
 See [START_HERE_M1.md](START_HERE_M1.md) for the Windows installation
@@ -14,8 +23,8 @@ insert/get/delete/scan methods use decoded tuples and maintain live-row
 counts. HeapFile remains the lower-level encoded-record API.
 
 `python measure_m1.py` reproduces capacity and scan-cost measurements.
-The required five published traces still need to be supplied before the
-policy section of REPORT_M1.md is complete.
+REPORT_M1.md includes five self-generated traces and all 40 policy measurements.
+Use generate_m1_traces.py to reproduce the input files.
 
 ## Run
 

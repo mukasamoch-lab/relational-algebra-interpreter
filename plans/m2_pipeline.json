@@ -1,0 +1,16 @@
+{
+  "op": "limit",
+  "n": 1,
+  "child": {
+    "op": "project",
+    "columns": ["R.b", "R.c"],
+    "child": {
+      "op": "filter",
+      "condition": "R.a > 42",
+      "child": {
+        "op": "seqscan",
+        "table": "R"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 from slotted_page import PAGE_SIZE
 from collections import OrderedDict
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 
@@ -30,6 +31,11 @@ class BufferPool:
         self.hits = 0
         self.misses = 0
         self.evictions = 0
+        self.retired_reads = 0
+        self.retired_writes = 0
+        self.peak_frames = 0
+        self.reservations = []
+        self.peak_accounted_frames = 0
 
     def for_file(self, disk):
         name = str(disk.path.resolve())
@@ -87,7 +93,10 @@ class BufferPool:
         return frame
 
     def _prepare_slot(self):
-        if len(self.frames) < self.capacity:
+        limit = self.capacity - max(self.reservations, default=0)
+        if limit < 1:
+            raise RuntimeError("no frame available within the working-memory budget")
+        if len(self.frames) < limit:
             return None, None
 
         clock_slot = None
@@ -115,13 +124,18 @@ class BufferPool:
             del self.frames[self._key(victim.page_id, victim.disk)]
         key = self._key(frame.page_id, frame.disk)
         self.frames[key] = frame
+        self.peak_frames = max(self.peak_frames, len(self.frames))
+        self.peak_accounted_frames = max(
+            self.peak_accounted_frames,
+            len(self.frames) + max(self.reservations, default=0),
+        )
 
         if self.policy == "clock":
             if clock_slot is None:
                 self.clock_slots.append(key)
             else:
                 self.clock_slots[clock_slot] = key
-                self.clock_hand = (clock_slot + 1) % self.capacity
+                self.clock_hand = (clock_slot + 1) % len(self.clock_slots)
 
     def _clock_victim(self):
         slot = self.clock_hand
@@ -132,7 +146,7 @@ class BufferPool:
                     return slot
                 frame.referenced = False
 
-            slot = (slot + 1) % self.capacity
+            slot = (slot + 1) % len(self.clock_slots)
 
         return None
 
@@ -150,9 +164,69 @@ class BufferPool:
             "hits": self.hits,
             "misses": self.misses,
             "evictions": self.evictions,
-            "reads": sum(disk.reads for disk in self.disks.values()),
-            "writes": sum(disk.writes for disk in self.disks.values()),
+            "reads": self.retired_reads + sum(disk.reads for disk in self.disks.values()),
+            "writes": self.retired_writes + sum(disk.writes for disk in self.disks.values()),
         }
+
+    @contextmanager
+    def working_memory(self, pages=1):
+        """Reserve a streaming tuple workspace shared along a unary pipeline."""
+        previous = max(self.reservations, default=0)
+        required = max(previous, pages)
+        limit = self.capacity - required
+        if limit < 1:
+            raise RuntimeError("working-memory request exceeds the frame budget")
+        while len(self.frames) > limit:
+            victim, clock_slot = self._prepare_slot_for_trim()
+            key = self._key(victim.page_id, victim.disk)
+            del self.frames[key]
+            if self.policy == "clock":
+                self.clock_slots.pop(clock_slot)
+                self.clock_hand = 0
+        self.reservations.append(pages)
+        self.peak_accounted_frames = max(
+            self.peak_accounted_frames, len(self.frames) + required
+        )
+        try:
+            yield
+        finally:
+            self.reservations.pop()
+
+    def _prepare_slot_for_trim(self):
+        if self.policy == "clock":
+            slot = self._clock_victim()
+            victim = self.frames[self.clock_slots[slot]] if slot is not None else None
+        else:
+            slot = None
+            victim = next(
+                (frame for frame in self.frames.values() if frame.pin_count == 0), None
+            )
+        if victim is None:
+            raise RuntimeError("no unpinned frame available for working memory")
+        if victim.dirty:
+            victim.disk.write_page(victim.page_id, victim.data)
+            victim.dirty = False
+        return victim, slot
+
+    def discard_file(self, disk):
+        """Release temporary frames while retaining their cumulative I/O totals."""
+        if disk is self.disk:
+            raise ValueError("cannot discard the default database file")
+        keys = [key for key, frame in self.frames.items() if frame.disk is disk]
+        if any(self.frames[key].pin_count for key in keys):
+            raise RuntimeError("cannot discard a file with pinned frames")
+        for key in keys:
+            frame = self.frames[key]
+            if frame.dirty:
+                disk.write_page(frame.page_id, frame.data)
+            del self.frames[key]
+        if self.policy == "clock":
+            self.clock_slots = [key for key in self.clock_slots if key not in keys]
+            self.clock_hand = 0
+        name = str(disk.path.resolve())
+        if self.disks.pop(name, None) is not None:
+            self.retired_reads += disk.reads
+            self.retired_writes += disk.writes
 
     def flush_all(self):
         for frame in self.frames.values():
