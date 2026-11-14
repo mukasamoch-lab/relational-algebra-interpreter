@@ -2,6 +2,21 @@
 
 Python 3, standard library only. The scanner and recursive descent parser are handwritten; no regular expressions, parser generators, `eval`, or SQL engine are used.
 
+## Project 2 storage
+
+See [START_HERE_M1.md](START_HERE_M1.md) for the Windows installation
+and end-to-end checks. The five storage commands are available through
+`python storage.py` and the Linux `./storage` launcher. All files share
+one buffer pool. The catalog is persisted in pages.
+
+The named-table library API is `catalog.open_table(name)`, whose
+insert/get/delete/scan methods use decoded tuples and maintain live-row
+counts. HeapFile remains the lower-level encoded-record API.
+
+`python measure_m1.py` reproduces capacity and scan-cost measurements.
+The required five published traces still need to be supplied before the
+policy section of REPORT_M1.md is complete.
+
 ## Run
 
 Put relation definitions in `data.ra`:
@@ -50,18 +65,26 @@ The last commands may take a very long time. `benchmark.py` prints each complete
 
 ## Syntax and semantics
 
-See `GRAMMAR.md` for EBNF, precedence, literals, and the ambiguity demonstration. Supported operations: `select`, `project`, `rename`, `union`, `intersect`, `minus`, `times`, and conditional `join`. Relations use set semantics. Tuple equality is explicitly defined by `equal_tuple` and checked when inserting output tuples. Schema checks precede set operations; conditions compare two attributes or an attribute and a literal. An unqualified column shared by two inputs is ambiguous. Query errors are reported with positions and without stack traces.
+See `GRAMMAR.md` for EBNF, precedence, literals, and the ambiguity demonstration. Supported operations: `select`, `project`, `rename`, `union`, `intersect`, `minus`, `times`, and conditional `join`. Projection preserves duplicate rows. Use `distinct(project[Name](Employees))` to remove them. The Bonus 1 input loader and the set operators retain their original duplicate handling. Schema checks precede set operations; conditions compare two attributes or an attribute and a literal. An unqualified column shared by two inputs is ambiguous. Query errors are reported with positions and without stack traces.
 
 `rename[E2](Emp)` makes a self join possible: `rename[E2](Emp) join[Emp.MgrID=E2.EID] Emp`. Without renaming, both copies would have the same qualified column names (for example, `Emp.EID`); there would be no unambiguous way to say which copy each reference denotes. The join keeps columns from both inputs.
 
 ## Code structure
 
-- `ra.py`: query scanner, parser, AST/tree printer, command-line entry point.
+- `ra.py`: command-line entry point and legacy imports.
+- `ra_lexer.py`: tokenizer and query errors.
+- `ra_parser.py`: query parser and standalone `parse_condition`.
+- `ra_tree.py`: AST, tree rendering, and `tree_to_json` / `tree_from_json`.
 - `ra_data.py`: line-aware relation loader; quoted/bare values and schema inference.
 - `ra_engine.py`: relation representation, explicit tuple equality, operators, checks, and counters.
 - `generate_data.py`: size and match-rate controlled `R(a,b)` / `S(b,c)` generator.
 - `benchmark.py`: query timings and measured counters.
 - `tests/`: all 25 numbered assignment cases and additional checks.
+
+Library callers can pass `evaluate` a mapping of relation names or a function
+that returns a `Relation` with a fresh iterable of tuples for each lookup.
+This evaluator still materializes operator results. Module 2 defines the
+iterator interface for streaming execution.
 
 ## Known limits and remaining deliverables
 

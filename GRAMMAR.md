@@ -18,6 +18,7 @@ product_expr      = primary,
 primary           = identifier
                   | "(", expression, ")"
                   | "select", "[", condition, "]", "(", expression, ")"
+                  | "distinct", "(", expression, ")"
                   | "project", "[", attribute_list, "]", "(", expression, ")"
                   | "rename", "[", identifier, "]", "(", expression, ")" ;
 attribute_list    = attribute_ref, { ",", attribute_ref } ;
@@ -57,7 +58,7 @@ hspace            = { " " | TAB } ;
 value             = number | quoted_string | bare_string ;
 ```
 
-`comment_char` is any character other than a line ending. `NEWLINE` accepts LF or CRLF. The final line of a file may end at `EOF` instead of a newline. A line beginning `//` inside a quoted string is data; comments are recognized only at the start of a line outside strings. A closing brace ends the definition and is not a tuple. Each tuple must have exactly as many values as the definition has attribute names. Duplicate attribute names and duplicate names in a projection list cause a schema error. Duplicate tuples in input or output collapse according to the engine's tuple-equality rule. These are semantic constraints, beyond what this grammar alone can express.
+`comment_char` is any character other than a line ending. `NEWLINE` accepts LF or CRLF. The final line of a file may end at `EOF` instead of a newline. A line beginning `//` inside a quoted string is data; comments are recognized only at the start of a line outside strings. A closing brace ends the definition and is not a tuple. Each tuple must have exactly as many values as the definition has attribute names. Duplicate attribute names and duplicate names in a projection list cause a schema error. The Bonus 1 data loader still collapses duplicate input tuples. Projection preserves duplicates. The explicit `distinct` operator removes them. These are semantic constraints, beyond what this grammar alone can express.
 
 ## Lexical rules
 
@@ -81,7 +82,7 @@ The handwritten scanner consumes a complete quoted string before recognizing any
 | 1 | `union`, `minus` | Left | `expression` repetition, folded left |
 | 2 | `intersect` | Left | `intersect_expr` repetition, folded left |
 | 3 | `times`, `join[c]` | Left | `product_expr` repetition, folded left |
-| 4 | Relation names, parentheses, `select`, `project`, `rename` | Explicit input parentheses | `primary` |
+| 4 | Relation names, parentheses, `select`, `project`, `rename`, `distinct` | Explicit input parentheses | `primary` |
 
 For conditions, `or` is weakest, `and` is next, and `not` is strongest among logical operators. Repeated `or` and `and` group left, while repeated `not` nests right. Comparisons form atoms; explicit condition parentheses override the order. Each repeated binary expression rule builds its next node with the accumulated tree as its left child. Thus `A union B minus C` means `(A union B) minus C`, and `A minus B minus C` means `(A minus B) minus C`.
 

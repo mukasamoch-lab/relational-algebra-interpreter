@@ -15,3 +15,43 @@ With AI assistance, I built the scanner, recursive descent parser, tree printer,
 The first AI-written loader and projection implementation checked every new tuple against every previous tuple, which would make the 64,000-row performance study impractical. The one-million-pair timing and a review of the loops exposed this scaling problem. I changed deduplication to use hash buckets only for candidate lookup, while my explicit `equal_tuple` still decides equality; I also resolved comparison attributes once per operator rather than once per pair. On the same environment, the 1,000-row zero-match join fell from roughly 2.53 seconds to 0.29 seconds. These are local trial measurements, not the submitted benchmark data.
 
 I ran the full seven-size study on my Windows i7-1355U with Python 3.12.10 and used its CSV for the report. The 32,000-row join time was much higher than a smooth continuation of earlier runs, so I kept the measured value and noted the unexplained variation. A second 4,000-row run with match rate 1 produced 4,000 joined rows, yet was slightly faster than the zero-match run; I treated that as insufficient to infer a causal speedup.
+
+## Project 2 library refactor
+
+The Bonus 1 baseline passed all 32 tests before the split. Case 23 changed
+because projection now preserves duplicate rows. It expects D1, D2, D1 from
+the original fixture and checks that explicit distinct returns D1, D2.
+The other original test expectations stayed the same.
+
+A new test found that the parser treated a trailing identifier spelled EOF
+as the end-of-input token. End of input now matches only the token kind.
+A join test passes one-shot tuple iterators from a source function. The
+evaluator reads the right input once so it can revisit those tuples for
+each left tuple. This is the library refactor's evaluation behavior, with
+the page-budgeted join deferred to Module 2.
+
+## Module 1 storage integration
+
+AI assistance extended the locally written storage classes with a shared
+buffer budget, paged catalog snapshots, a CSV loader, CLI commands, and
+regression tests. The original 35 tests passed before these additions.
+
+Two problems in the earlier AI-assisted design required corrections.
+The original pool keyed pages only by integer page ID. Two table files
+can both have page 0, so a shared budget also needs file identity in the
+key. A regression test now stores different bytes in page 0 of two files
+through one pool and verifies both files after flushing.
+
+The original fetch allocated an incoming full-page bytearray while the
+victim's full-page bytearray was still resident. That made page-buffer
+allocation exceed B during replacement. The disk manager now supports
+read_page_into and replacement reuses the victim's bytearray. New-page
+replacement clears the same buffer in place. The earlier heap insert
+also allocated a separate full page just to initialize a header. It now
+initializes the new pinned frame directly.
+
+Tests cover partial CSV failure, duplicate rows, UTF-8 byte limits,
+catalog snapshots spanning multiple pages, early scan closure, dirty
+eviction, repeated flushes, and directory overflow past 681 data pages.
+The storage examples and capacity/scan measurements are reproducible.
+Published trace measurements remain pending receipt of the five files.

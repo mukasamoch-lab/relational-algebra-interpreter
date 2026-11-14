@@ -1,10 +1,13 @@
-"""In-memory set relations and bottom-up evaluation of the RA parse tree."""
+"""Relation operators and bottom-up evaluation of the RA parse tree."""
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
+from itertools import chain
 
-from ra import Node, QueryError
+from ra_lexer import QueryError
+from ra_tree import Node
 
 
 @dataclass(frozen=True)
@@ -22,7 +25,7 @@ class Column:
 class Relation:
     name: str
     columns: tuple[Column, ...]
-    rows: list[tuple[int | float | str, ...]]
+    rows: Iterable[tuple[int | float | str, ...]]
 
 
 def equal_tuple(left: tuple, right: tuple) -> bool:
@@ -35,7 +38,7 @@ def equal_tuple(left: tuple, right: tuple) -> bool:
     return True
 
 
-def contains_row(rows: list[tuple], candidate: tuple) -> bool:
+def contains_row(rows: Iterable[tuple], candidate: tuple) -> bool:
     for existing in rows:
         if equal_tuple(existing, candidate):
             return True
@@ -173,18 +176,24 @@ class Counters:
         return entry
 
 
-def evaluate(tree: Node, catalog: dict[str, Relation], counters: Counters | None = None) -> Relation:
+def evaluate(
+    tree: Node,
+    catalog: Mapping[str, Relation] | Callable[[str], Relation],
+    counters: Counters | None = None,
+) -> Relation:
+    """Evaluate using a catalog or a function that opens a fresh tuple source by name."""
     if counters is None:
         counters = Counters()
     kind = tree.kind
     if kind == "Relation":
-        if tree.label not in catalog:
-            raise QueryError("Name", f"unknown relation {tree.label!r}", tree.position)
-        return catalog[tree.label]
-    if kind in ("Select", "Project", "Rename"):
+        try:
+            return catalog(tree.label) if callable(catalog) else catalog[tree.label]
+        except KeyError:
+            raise QueryError("Name", f"unknown relation {tree.label!r}", tree.position) from None
+    if kind in ("Select", "Project", "Rename", "Distinct"):
         child = evaluate(tree.children[-1], catalog, counters)
         if kind == "Rename":
-            return Relation(tree.label, tuple(Column(c.name, tree.label, c.type_name) for c in child.columns), child.rows.copy())
+            return Relation(tree.label, tuple(Column(c.name, tree.label, c.type_name) for c in child.columns), list(child.rows))
         if kind == "Project":
             refs = [part.strip() for part in tree.label.split(",")]
             if len(refs) != len(set(refs)):
@@ -193,11 +202,14 @@ def evaluate(tree: Node, catalog: dict[str, Relation], counters: Counters | None
             if len(indices) != len(set(indices)):
                 raise QueryError("Schema", "same attribute projected twice", tree.position)
             cols = tuple(child.columns[i] for i in indices)
-            rows: list[tuple] = []
+            rows = [tuple(row[i] for i in indices) for row in child.rows]
+            return Relation(child.name, cols, rows)
+        if kind == "Distinct":
+            rows = []
             buckets: dict[int, list[tuple]] = {}
             for row in child.rows:
-                add_unique(rows, tuple(row[i] for i in indices), buckets)
-            return Relation(child.name, cols, rows)
+                add_unique(rows, row, buckets)
+            return Relation(child.name, child.columns, rows)
         condition = tree.children[0]
         predicate = compile_condition(condition, child.columns)
         entry = counters.register("select", tree.position)
@@ -216,11 +228,12 @@ def evaluate(tree: Node, catalog: dict[str, Relation], counters: Counters | None
         rows: list[tuple] = []
         if kind == "Union":
             buckets: dict[int, list[tuple]] = {}
-            for row in left.rows + right.rows:
+            for row in chain(left.rows, right.rows):
                 add_unique(rows, row, buckets)
         else:
+            right_rows = tuple(right.rows)
             for row in left.rows:
-                present = contains_row(right.rows, row)
+                present = contains_row(right_rows, row)
                 if present == (kind == "Intersect"):
                     add_unique(rows, row)
         return Relation(left.name, left.columns, rows)
@@ -230,15 +243,15 @@ def evaluate(tree: Node, catalog: dict[str, Relation], counters: Counters | None
         predicate = compile_condition(condition, cols) if condition is not None else None
         entry = counters.register("join", tree.position) if condition is not None else None
         rows = []
+        right_rows = tuple(right.rows)
         for a in left.rows:
-            for b in right.rows:
+            for b in right_rows:
                 pair = a + b
                 if predicate is not None:
                     counters.join_comparisons += 1
                     entry.evaluations += 1
                     if not predicate(pair):
                         continue
-                # Distinct input tuples produce distinct concatenated tuples.
                 rows.append(pair)
         return Relation("", cols, rows)
     raise QueryError("Syntax", f"unknown tree operation {kind!r}", tree.position)

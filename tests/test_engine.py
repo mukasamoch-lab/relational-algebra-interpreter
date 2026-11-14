@@ -72,9 +72,11 @@ class AssignmentSemanticCases(unittest.TestCase):
             self.run_query("select[Age>'30'](Employees)")
         self.assertEqual(caught.exception.category, "Type")
 
-    def test_23_projection_deduplicates(self):
+    def test_23_projection_preserves_duplicates(self):
         result = self.run_query("project[DID](Employees)")
-        self.assertEqual(result.rows, [("D1",), ("D2",)])
+        self.assertEqual(result.rows, [("D1",), ("D2",), ("D1",)])
+        distinct = self.run_query("distinct(project[Employees.DID](Employees))")
+        self.assertEqual(distinct.rows, [("D1",), ("D2",)])
 
     def test_24_repeated_projection_attribute_errors(self):
         with self.assertRaises(QueryError) as caught:

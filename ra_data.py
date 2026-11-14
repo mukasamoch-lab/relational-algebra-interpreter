@@ -1,6 +1,6 @@
 """Line-aware relation-definition loader; each tuple occupies one line."""
 
-from ra import QueryError, tokenize
+from ra_lexer import QueryError, tokenize
 from ra_engine import Column, Relation, add_unique, value_type
 
 
