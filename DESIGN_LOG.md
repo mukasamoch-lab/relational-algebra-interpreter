@@ -112,3 +112,24 @@ temporary encodings for derived numeric results, so a sort above AVG
 can spool its input and preserve the result type. Four-frame regression
 tests exercise both grouping modes, empty inputs, duplicate elimination,
 set operations over disk-sized inputs, and early UNION ALL termination.
+
+## Module 2 join benchmarks
+
+The instructor authorized generated fixtures. We measured all 36
+size and budget combinations and two skew cases. The wide fixture
+gives an exact mapping of one row per page. An eight-kilobyte join
+result needs two workspace pages, which accounts for part of the
+block nested-loop cost difference from the one-page formula.
+
+## Module 3 compiler
+
+The module examples expose two interface gaps. The executor originally
+accepted only two-element aggregate definitions and had no rename
+operator. The grouped alias and self-join plans required aggregate
+output names and a qualifier change, so the executor now accepts
+aggregate triples and rename. A hidden ORDER BY key also cannot be
+read from a projection that dropped it. The compiler keeps that key
+until after sorting, and the test executes the resulting plan.
+
+The grammar and compiler are handwritten. Tests cover the fifteen
+required cases and report compiler errors with source locations.

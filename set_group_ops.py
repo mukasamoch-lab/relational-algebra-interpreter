@@ -172,7 +172,7 @@ class Group(RunOperator):
         self.key_indices = [names.index(key) for key in keys]
         self.aggregates = []
         schema = [child.schema[index] for index in self.key_indices]
-        for function, name in aggregates:
+        for function, name, *alias in aggregates:
             if function not in ("count", "sum", "avg", "min", "max"):
                 node_error(op, f"unknown aggregate {function!r}")
             if name == "*" and function == "count":
@@ -183,7 +183,7 @@ class Group(RunOperator):
                 node_error(op, f"invalid aggregate column {name!r}")
             if function in ("sum", "avg") and child.schema[index][1] not in ("INT", "BIGINT"):
                 node_error(op, f"{function} requires an integer column")
-            output_name = f"{function}_{'star' if index is None else name.replace('.', '_')}"
+            output_name = alias[0] if alias else f"{function}_{'star' if index is None else name.replace('.', '_')}"
             if function in ("min", "max"):
                 schema.append([output_name, *child.schema[index][1:]])
             else:

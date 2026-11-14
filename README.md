@@ -2,6 +2,18 @@
 
 Python 3, standard library only. The scanner and recursive descent parser are handwritten; no regular expressions, parser generators, `eval`, or SQL engine are used.
 
+## Project 2 SQL compiler
+
+```powershell
+python sql_frontend.py parse --query "SELECT a FROM R WHERE a > 42" --explain
+python sql_frontend.py compile --db m1_demo --file sample.sql --json
+python sql_frontend.py check --db m1_demo --file sample.sql
+```
+
+For the compile example, put `SELECT b FROM R ORDER BY a DESC;`
+in sample.sql. Compile emits a logical plan. See GRAMMAR_SQL.md and
+DESIGN_M3.md for the supported SQL and plan fields.
+
 ## Project 2 execution pipeline
 
 Current Module 2 operators are seqscan, filter, project, limit, and external sort.

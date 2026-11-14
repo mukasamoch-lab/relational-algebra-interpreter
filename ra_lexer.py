@@ -51,7 +51,7 @@ def tokenize(source: str) -> list[Token]:
                 i += 1
             tokens.append(Token("STRING", "".join(parts), start))
             continue
-        if ch.isascii() and ch.isalpha():
+        if ch.isascii() and (ch.isalpha() or ch == "_"):
             i += 1
             while i < len(source) and source[i].isascii() and (
                 source[i].isalnum() or source[i] == "_"

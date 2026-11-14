@@ -16,7 +16,7 @@ JOINS = {"nested_loop_join", "sort_merge_join", "hash_join"}
 SETS = {"union_all", "union", "intersect", "except"}
 GROUPS = {"group_by", "distinct"}
 
-SUPPORTED = {"seqscan", "filter", "project", "limit", "sort"} | JOINS | SETS | GROUPS
+SUPPORTED = {"seqscan", "filter", "project", "limit", "sort", "rename"} | JOINS | SETS | GROUPS
 
 
 def node_error(op, message):
@@ -38,6 +38,7 @@ def validate_plan(plan):
         "project": {"columns": list, "child": dict},
         "limit": {"n": int, "child": dict},
         "sort": {"keys": list, "child": dict},
+        "rename": {"to": str, "child": dict},
     }[op]
     for field, expected in required.items():
         if field not in plan:
@@ -50,7 +51,11 @@ def validate_plan(plan):
         columns = plan["columns"]
         if not columns or not all(isinstance(name, str) for name in columns):
             node_error(op, "columns must be a nonempty list of column names")
-        if len(set(columns)) != len(columns):
+        aliases = plan.get("aliases", columns)
+        if (not isinstance(aliases, list) or len(aliases) != len(columns)
+                or not all(isinstance(name, str) and name for name in aliases)):
+            node_error(op, "aliases must supply one output name per column")
+        if len(set(aliases)) != len(aliases):
             node_error(op, "output has duplicate qualified column names")
     if op == "sort":
         keys = plan["keys"]
@@ -71,9 +76,9 @@ def validate_plan(plan):
         if not all(isinstance(key, str) for key in plan["keys"]):
             node_error(op, "keys must contain column names")
         for agg in plan["aggregates"]:
-            if (not isinstance(agg, list) or len(agg) != 2
+            if (not isinstance(agg, list) or len(agg) not in (2, 3)
                     or not all(isinstance(value, str) for value in agg)):
-                node_error(op, "each aggregate must be [function, column]")
+                node_error(op, "each aggregate must be [function, column] or [function, column, alias]")
         if not plan["keys"] and not plan["aggregates"]:
             node_error(op, "at least one key or aggregate is required")
     if op in JOINS | SETS:
@@ -188,17 +193,33 @@ class Filter(Operator):
 
 
 class Project(Operator):
-    def __init__(self, child, columns):
+    def __init__(self, child, columns, aliases=None):
         names = [column[0] for column in child.schema]
         for name in columns:
             if name not in names:
                 node_error("project", f"unknown column '{name}'")
         self.indices = [names.index(name) for name in columns]
-        super().__init__("project", [child.schema[index] for index in self.indices], child)
+        schema = [[name, *child.schema[index][1:]]
+                  for name, index in zip(aliases or columns, self.indices)]
+        super().__init__("project", schema, child)
 
     def _next(self):
         row = self.child.next()
         return None if row is None else tuple(row[index] for index in self.indices)
+
+
+class Rename(Operator):
+    def __init__(self, child, qualifier):
+        if not qualifier or "." in qualifier:
+            node_error("rename", "invalid qualifier")
+        schema = [[f"{qualifier}.{name.rsplit('.', 1)[-1]}", *data_type]
+                  for name, *data_type in child.schema]
+        if len({column[0] for column in schema}) != len(schema):
+            node_error("rename", "duplicate exposed columns")
+        super().__init__("rename", schema, child)
+
+    def _next(self):
+        return self.child.next()
 
 
 class Limit(Operator):
@@ -254,7 +275,9 @@ def build_plan(plan, catalog):
             if op == "filter":
                 return Filter(child, node["condition"])
             if op == "project":
-                return Project(child, node["columns"])
+                return Project(child, node["columns"], node.get("aliases"))
+            if op == "rename":
+                return Rename(child, node["to"])
             if op == "sort":
                 from external_sort import Sort
                 return Sort(child, node["keys"], catalog)
