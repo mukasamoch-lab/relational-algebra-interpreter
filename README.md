@@ -131,3 +131,10 @@ iterator interface for streaming execution.
 - Tuple deduplication uses hash buckets only to narrow candidate rows, then calls our own `equal_tuple` to decide equality. Joins still use nested loops and no hash join. An unusually large number of hash collisions can slow deduplication.
 - Comments occupy whole lines; tuple rows start on the line after `{`. The one-line form `{}` is accepted for an empty relation.
 - `REPORT.md` contains one complete 1,000–64,000 row performance study, a log-log graph, an extrapolation, and one match-rate comparison from a Windows i7-1355U machine. The video and GitHub submission remain to be completed.
+
+## Project 2 final integration
+
+See [START_HERE_FINAL.md](START_HERE_FINAL.md) for the test, shell
+walkthrough, PostgreSQL comparison, and demo commands. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for the module interfaces and
+[REPORT_M4.md](REPORT_M4.md) for the measured optimizer workload.
