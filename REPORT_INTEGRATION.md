@@ -3,7 +3,8 @@
 These are 25 generated queries. See REPORT_M4.md for the dataset
 and m4_results/m4_measurements.json for SQL and per-node results.
 The local SQLite comparison passed for all 25 result multisets.
-PostgreSQL on OpenStack remains a separate verification step.
+All 25 generated rehearsal queries matched PostgreSQL on OpenStack.
+The comparison checked row counts and complete result sets, including duplicates.
 This report does not contain results for any instructor-issued hidden workload.
 
 | Query | Actual rows | Page reads | Page writes | Page I/O | Wall ms | Estimated root rows |
@@ -33,3 +34,17 @@ This report does not contain results for any instructor-issued hidden workload.
 | Q23 | 2 | 3 | 1 | 4 | 1.680 | 2 |
 | Q24 | 4 | 4 | 2 | 6 | 3.477 | 2 |
 | Q25 | 60 | 1051 | 182 | 1233 | 177.310 | 60 |
+
+## Sources and their effect
+
+Graefe's *Volcano* paper informed the iterator interface between the
+physical plan and the executor. The SQL shell pulls rows from the root
+operator and uses that same execution path to collect actual counts
+for EXPLAIN ANALYZE.
+[Graefe, Volcano](https://people.eecs.berkeley.edu/~prabal/teaching/resources/eecs582/graefe94volcano.pdf)
+
+PostgreSQL's SELECT documentation informed the result comparison.
+UNION ALL retains duplicates, and row order is unspecified without
+ORDER BY. The workload checker compares rows with their multiplicities,
+while the ordered shell demo is checked separately.
+[PostgreSQL SELECT](https://www.postgresql.org/docs/current/sql-select.html)

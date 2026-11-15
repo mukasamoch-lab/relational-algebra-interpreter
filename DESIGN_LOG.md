@@ -10,9 +10,9 @@ I drafted `GRAMMAR.md` before starting the parser and checked it against nested 
 
 ## 2026-09-28
 
-With AI assistance, I built the scanner, recursive descent parser, tree printer, relation loader, evaluator, generator, and tests. AI generated substantial code, and I ran the tests and benchmarks and worked through explanations of the implementation. An AI-written whitespace-equivalence test compared entire AST nodes, including character offsets, and failed even though both queries printed the same tree; the failing test revealed that positions should differ, so I changed the assertion to compare the rendered trees. The 25 required cases and additional checks then passed, and a 1,000-by-1,000 nested-loop join recorded one million comparisons.
+With AI assistance, I built the scanner, recursive descent parser, tree printer, relation loader, evaluator, generator, and tests. After writing the code, I ran the tests and benchmarks and worked through explanations of the implementation. An AI-written whitespace-equivalence test compared entire AST nodes, including character offsets, and failed even though both queries printed the same tree; the failing test revealed that positions should differ, so I changed the assertion to compare the rendered trees. The 25 required cases and additional checks then passed, and a 1,000-by-1,000 nested-loop join recorded one million comparisons.
 
-The first AI-written loader and projection implementation checked every new tuple against every previous tuple, which would make the 64,000-row performance study impractical. The one-million-pair timing and a review of the loops exposed this scaling problem. I changed deduplication to use hash buckets only for candidate lookup, while my explicit `equal_tuple` still decides equality; I also resolved comparison attributes once per operator rather than once per pair. On the same environment, the 1,000-row zero-match join fell from roughly 2.53 seconds to 0.29 seconds. These are local trial measurements, not the submitted benchmark data.
+The first loader and projection implementation checked every new tuple against every previous tuple, which would make the 64,000-row performance study impractical. The one-million-pair timing and a review of the loops exposed this scaling problem. I changed deduplication to use hash buckets only for candidate lookup, while my explicit `equal_tuple` still decides equality; I also resolved comparison attributes once per operator rather than once per pair. On the same environment, the 1,000-row zero-match join fell from roughly 2.53 seconds to 0.29 seconds. These are local trial measurements, not the submitted benchmark data.
 
 I ran the full seven-size study on my Windows i7-1355U with Python 3.12.10 and used its CSV for the report. The 32,000-row join time was much higher than a smooth continuation of earlier runs, so I kept the measured value and noted the unexplained variation. A second 4,000-row run with match rate 1 produced 4,000 joined rows, yet was slightly faster than the zero-match run; I treated that as insufficient to infer a causal speedup.
 
@@ -32,7 +32,7 @@ the page-budgeted join deferred to Module 2.
 
 ## Module 1 storage integration
 
-AI assistance extended the locally written storage classes with a shared
+With AI assistance I extended the locally written storage classes with a shared
 buffer budget, paged catalog snapshots, a CSV loader, CLI commands, and
 regression tests. The original 35 tests passed before these additions.
 
@@ -58,7 +58,7 @@ Published trace measurements remain pending receipt of the five files.
 
 ## Module 2 first pipeline
 
-AI assistance added the iterator interface and seqscan/filter/project/limit
+With AI assistance I added the iterator interface and seqscan/filter/project/limit
 operators. Conditions reuse the extracted Bonus 1 parser and compiler.
 Plan shape and semantic checks happen before opening the iterator chain.
 The new tests verify duplicate preservation, one filter comparison per
@@ -73,7 +73,7 @@ remain open while the other operators are built.
 
 ## Module 2 external sort
 
-AI assistance added temporary page files, bounded run generation, and
+With AI assistance I added temporary page files, bounded run generation, and
 B-1-way merging. The first implementation failed three VARCHAR tests
 because decode_record called .decode on a memoryview slice. The regression
 traceback identified that the decoder had assumed bytes. It now converts
@@ -123,13 +123,20 @@ block nested-loop cost difference from the one-page formula.
 
 ## Module 3 compiler
 
-The module examples expose two interface gaps. The executor originally
-accepted only two-element aggregate definitions and had no rename
-operator. The grouped alias and self-join plans required aggregate
-output names and a qualifier change, so the executor now accepts
-aggregate triples and rename. A hidden ORDER BY key also cannot be
-read from a projection that dropped it. The compiler keeps that key
-until after sorting, and the test executes the resulting plan.
+Two issues surfaced while checking the AI-assisted SQL compiler against
+the Module 3 examples and the executor.
+
+1. The draft produced alias and aggregate plans before checking the
+   executor's interface. Reviewing the self-join and grouped alias
+   examples against the executor showed that it had no rename operator
+   and accepted only two-element aggregate definitions. The executor
+   now changes qualifiers through rename and accepts a third aggregate
+   field for the output name.
+2. The draft projected away a column still needed by ORDER BY. Tracing
+   the required case where the sort key is absent from the SELECT list
+   showed that the sort would receive a schema without its key. The
+   compiler now keeps the key in an intermediate projection until
+   after sorting. A regression executes the resulting plan.
 
 The grammar and compiler are handwritten. Tests cover the fifteen
 required cases and report compiler errors with source locations.
@@ -146,27 +153,27 @@ construction and executor result formatting.
 
 ## Module 4 optimizer and integration
 
-The first optimizer draft assumed that every ON conjunct would cross a
+The first AI-assisted optimizer draft assumed that every ON conjunct would cross a
 join boundary after flattening. A single-sided predicate can instead stay
 on the ON clause when pushdown is disabled. That draft could omit the
 condition. The regression disables the rules one by one for the combined
 key and points condition and checks the returned rows. The optimizer now
 keeps written order for such inputs if the predicate has not moved.
 
-Another integration mismatch was multiline SQL strings. The SQL scanner
+The AI-assisted integration exposed a mismatch with multiline SQL strings. The SQL scanner
 accepted them while the shared predicate lexer rejected a newline before
 the closing quote. A filter against a stored multiline value exposed the
 mismatch. The standalone predicate parser now opts into multiline values.
 The relational algebra query lexer retains its original behavior.
 
-The first workload fixture used VARCHAR(1200) to make wide rows, which
+The first AI-generated workload fixture used VARCHAR(1200) to make wide rows, which
 the existing schema validator immediately rejected. Five VARCHAR(240)
 columns make the workload wide within the supported schema instead.
 The first workload also omitted AS on subqueries. The compiler stopped
 at Q21, which prompted correcting the generated SQL and rerunning the
 full workload before recording measurements.
 
-The OpenStack CSV reader initially used the default CSV field limit.
+The AI-written OpenStack CSV reader initially used the default CSV field limit.
 The wide correlated query can put more than 128 KiB of JSON in one
 cell. A verifier round trip with a realistically sized CSV exposed
 the limit, so the reader now accepts the full exported cell.
