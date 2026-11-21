@@ -1,5 +1,9 @@
 # Relational algebra interpreter
 
+## Final DBMS Bonus Project Demo
+
+[Watch the project walkthrough and test demonstrations](https://drive.google.com/file/d/1gOQL59Tmik6zbB1cBUdufKuZfQPhBRLH/view?usp=sharing)
+
 Python 3, standard library only. The scanner and recursive descent parser are handwritten; no regular expressions, parser generators, `eval`, or SQL engine are used.
 
 ## Project 2 SQL compiler
